@@ -23,6 +23,8 @@ class ArticleController extends Controller
 
         $serviceResponse = $this->service->summarize(data_get($body, 'url'));
 
-        return view('index', $serviceResponse);
+        return response()->json([
+            'summary' => $serviceResponse['summary'],
+        ]);
     }
 }

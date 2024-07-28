@@ -37,7 +37,7 @@ class ArticleService
             $response = $client->completions()->create([
                 'model'       => 'gpt-3.5-turbo-instruct',
                 'prompt'      => "Summarize the following article:\n\n" . $content,
-                'max_tokens'  => 150,
+                'max_tokens'  => 300,
                 'temperature' => 0
             ]);
 

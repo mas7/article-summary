@@ -64,7 +64,6 @@
 
         button[type="submit"]:hover {
             background-color: #4cae4c;
-
         }
 
         .summary {
@@ -79,30 +78,29 @@
             word-wrap: break-word;
         }
 
-        .typing-animation {
-            line-height: 160%;
-            color: #333;
-            font-size: 16px;
+        .loading-animation {
+            display: none;
+            /* initially hidden */
+            margin: 20px auto;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #333;
+            animation: spin 1s ease-in-out infinite;
         }
 
-        .caret {
-            display: inline-block;
-            width: 2px;
-            height: 1em;
-            background-color: #333;
-            vertical-align: bottom;
-            animation: blink-caret .75s step-end infinite;
+        #summaryText {
+            line-height: 2vw;
         }
 
-        @keyframes blink-caret {
-
-            from,
-            to {
-                background-color: transparent;
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
             }
 
-            50% {
-                background-color: #333;
+            100% {
+                transform: rotate(360deg);
             }
         }
     </style>
@@ -110,42 +108,85 @@
 
 <body>
     <h1>Article Summarizer</h1>
-    <form action="{{ route('summarize') }}" method="POST">
+    <form action="{{ route('summarize') }}" method="POST" data-summarize-url="{{ route('summarize') }}">
         @csrf
         <label for="url">Enter the URL of the article to summarize:</label>
         <input type="text" id="url" name="url" required>
         <button type="submit">Summarize</button>
     </form>
 
-    @if(isset($summary))
-    <div class="summary">
+
+    <div class="loading-animation"></div>
+
+    <div class="summary" style="display: none;">
         <h2>Summary</h2>
-        <p class="typing-animation" id="summaryText"></p>
+        <p id="summaryText"></p>
     </div>
-    @endif
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const summaryElement = document.getElementById('summaryText');
-            const summaryText = `{{ $summary }}`;
-            const caret = document.createElement('span');
-            caret.className = 'caret';
-            summaryElement.appendChild(caret);
+        const form = document.querySelector('form');
+        const loadingAnimation = document.querySelector('.loading-animation');
+        const summaryElement = document.querySelector('.summary');
+        const summaryTextElement = document.getElementById('summaryText');
 
-            let i = 0;
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            loadingAnimation.style.display = 'block'; // Show loading animation
+            summaryElement.style.display = 'none'; // Hide summary element during load
 
-            function typeWriter() {
-                if (i < summaryText.length) {
-                    caret.before(summaryText.charAt(i));
-                    i++;
-                    setTimeout(typeWriter, 10);
+            const formData = new FormData(form);
+            const url = form.getAttribute('data-summarize-url'); // Get the URL from the data attribute
+
+            fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    displayTypingEffect(data.summary);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError(); // Handle errors by hiding loading and possibly displaying an error message
+                });
+        });
+
+        function displayTypingEffect(text) {
+            loadingAnimation.style.display = 'none'; // Ensure loading animation is hidden after typing
+            summaryElement.style.display = 'block'; // Show summary element
+
+            let index = 0;
+            if (!text || text.length === 0) {
+                showError("No summary available."); // Handle empty summaries
+                return;
+            }
+
+            function typeCharacter() {
+                if (index < text.length) {
+                    summaryTextElement.textContent += text.charAt(index);
+                    index++;
+                    setTimeout(typeCharacter, 15); // Adjust typing speed here
                 } else {
-                    caret.style.animation = 'none';
+                    loadingAnimation.style.display = 'none'; // Ensure loading animation is hidden after typing
+                    summaryElement.style.display = 'block'; // Show summary element
                 }
             }
-            typeWriter();
-        });
+            typeCharacter();
+        }
+
+        function showError(message = "An error occurred.") {
+            loadingAnimation.style.display = 'none'; // Hide loading animation on error
+            summaryTextElement.textContent = message; // Optional: Display error message
+            summaryElement.style.display = 'block'; // Show summary element even on error for message visibility
+        }
     </script>
+
+
 </body>
 
 </html>
